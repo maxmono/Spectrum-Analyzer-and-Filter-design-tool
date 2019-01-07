@@ -1,0 +1,947 @@
+{\rtf1\ansi\deff0\nouicompat{\fonttbl{\f0\fnil\fcharset0 Calibri;}}
+{\*\generator Riched20 10.0.17134}\viewkind4\uc1 
+\pard\sa200\sl276\slmult1\f0\fs22\lang9 gate code:\par
+\par
+\par
+classdef Gate < matlab.apps.AppBase\par
+\par
+    % Properties that correspond to app components\par
+    properties (Access = public)\par
+        gate             matlab.ui.Figure         % Gate\par
+        convulotion      matlab.ui.control.Button % Discrete Convolution\par
+        spectrumanalyzer matlab.ui.control.Button % Spectrum analyzer\par
+    end\par
+\par
+    methods (Access = private)\par
+\par
+        % Code that executes after component creation\par
+        function startupFcn(app)\par
+\par
+        end\par
+\par
+        % convulotion button pushed function\par
+        function convulotionButtonPushed(app)\par
+            Convolutionwindow;\par
+        end\par
+\par
+        % spectrumanalyzer button pushed function\par
+        function spectrumanalyzerButtonPushed(app)\par
+            Spectrumanalyzer;\par
+        end\par
+    end\par
+\par
+    % App initialization and construction\par
+    methods (Access = private)\par
+\par
+        % Create UIFigure and components\par
+        function createComponents(app)\par
+\par
+            % Create gate\par
+            app.gate = uifigure;\par
+            app.gate.Position = [100 100 640 480];\par
+            app.gate.Name = 'Gate';\par
+            setAutoResize(app, app.gate, true)\par
+\par
+            % Create convulotion\par
+            app.convulotion = uibutton(app.gate, 'push');\par
+            app.convulotion.ButtonPushedFcn = createCallbackFcn(app, @convulotionButtonPushed);\par
+            app.convulotion.Position = [60 217 214 47];\par
+            app.convulotion.Text = 'Discrete Convolution';\par
+\par
+            % Create spectrumanalyzer\par
+            app.spectrumanalyzer = uibutton(app.gate, 'push');\par
+            app.spectrumanalyzer.ButtonPushedFcn = createCallbackFcn(app, @spectrumanalyzerButtonPushed);\par
+            app.spectrumanalyzer.Position = [363 217 214 47];\par
+            app.spectrumanalyzer.Text = 'Spectrum analyzer';\par
+        end\par
+    end\par
+\par
+    methods (Access = public)\par
+\par
+        % Construct app\par
+        function app = Gate()\par
+\par
+            % Create and configure components\par
+            createComponents(app)\par
+\par
+            % Register the app with App Designer\par
+            registerApp(app, app.gate)\par
+\par
+            % Execute the startup function\par
+            runStartupFcn(app, @startupFcn)\par
+\par
+            if nargout == 0\par
+                clear app\par
+            end\par
+        end\par
+\par
+        % Code that executes before app deletion\par
+        function delete(app)\par
+\par
+            % Delete UIFigure when app is deleted\par
+            delete(app.gate)\par
+        end\par
+    end\par
+end\par
+\par
+\par
+\par
+\par
+\par
+\par
+Convolution window code:\par
+\par
+\par
+classdef Convolutionwindow < matlab.apps.AppBase\par
+\par
+    % Properties that correspond to app components\par
+    properties (Access = public)\par
+        UIFigure         matlab.ui.Figure           % Convolution\par
+        LabelDropDown    matlab.ui.control.Label    % Function1\par
+        DropDown         matlab.ui.control.DropDown % Rect, Sinc, Trig\par
+        fn1axis          matlab.ui.control.UIAxes   % Function 1\par
+        LabelKnob        matlab.ui.control.Label    % Amplitude\par
+        ampKnop1         matlab.ui.control.Knob     % [0 10]\par
+        fn2axis          matlab.ui.control.UIAxes   % Function 2\par
+        Label            matlab.ui.control.Label    % Drop Down\par
+        DropDown2        matlab.ui.control.DropDown % Rect, Sinc, Trig\par
+        Label2           matlab.ui.control.Label    % Amplitude\par
+        ampKnop2         matlab.ui.control.Knob     % [0 10]\par
+        convaxis         matlab.ui.control.UIAxes   % Title\par
+        animatedconvaxis matlab.ui.control.UIAxes   % Title\par
+        Label3           matlab.ui.control.Label    % Width\par
+        widthKnop1       matlab.ui.control.Knob     % [1 10]\par
+        Label4           matlab.ui.control.Label    % Width\par
+        widthKnop2       matlab.ui.control.Knob     % [1 10]\par
+        Button           matlab.ui.control.Button   % Back\par
+    end\par
+\par
+\par
+    properties (Access = public)\par
+        %global variables\par
+        function1;\par
+        function2;\par
+        %time axes\par
+        t1;\par
+        t2;\par
+        %convolution time axis\par
+        tc;\par
+        \par
+        xlimit;\par
+    end\par
+\par
+    methods (Access = private)\par
+          % function to animate convolution ( second graph)\par
+        function  convanimation(app)    \par
+            cla(app.animatedconvaxis)\par
+           if isvector(app.function1) && isvector(app.function2); % error handling\par
+                axis_color= [0.5 0.5 0.5];\par
+               convolution = conv(app.function1,app.function2)/100; % convolution\par
+              tf = fliplr(-app.t2);\par
+              % slide range of 'fn2' to discard non-ovelapping areas with 'fn1' in the convolution\par
+              tf = tf + ( min(app.t1)-max(tf) );\par
+              % get the range of the convolution\par
+              app.tc = [ tf app.t1(2:end)];\par
+              app.tc = app.tc+max(app.t2);\par
+             r = plot(app.animatedconvaxis,app.tc, convolution);\par
+              app.xlimit = [ ( min(app.t1)-abs(max(tf)-min(tf)) - 1 ) ( max(app.t1)+abs(max(tf)-min(tf)) + 1 ) ];\par
+              xlim(app.animatedconvaxis,app.xlimit  );\par
+              title(app.animatedconvaxis,'Convolutional Product)', 'Color', axis_color );\par
+              u_ym = 10;  \par
+              % animation block\par
+              for i=1:100:length(app.tc)\par
+                \par
+                % control speed of animation minimum is 0, the lower the faster\par
+                  pause(0);\par
+                  drawnow;\par
+           \par
+                  \par
+                  tf=tf+0.01;\par
+\par
+                % show overlapping regions\par
+               \par
+                  sx = min( max( tf(1), min(app.t1) ), max(app.t1) );  \par
+                 \par
+                \par
+                % show a second vetical line for the right boundary of overlapping region\par
+                  ex = min( tf(end), max(app.t1) );  \par
+                  ex_a = [ex ex];\par
+\par
+                      \par
+\par
+                  \par
+                % update the plot of convolutional product 'c', its handle is r\par
+                  set(r,'EraseMode','xor');\par
+                  set(r,'XData',app.tc(1:i),'YData',convolution(1:i) );\par
+                \par
+              end;\par
+               \par
+               \par
+               \par
+               \par
+           end\par
+        end\par
+     \par
+     \par
+        \par
+        \par
+        function  conv(app) % normal convolution\par
+            \par
+           if isvector(app.function1) & isvector(app.function2); % error handling\par
+           convolution = conv(app.function1,app.function2)/100;\par
+           plot(app.convaxis,app.tc,convolution);\par
+           xlim(app.convaxis, app.xlimit );\par
+           title(app.convaxis,'Convolutional Product)', 'Color', [0.5 0.5 0.5] );\par
+                \par
+           end\par
+        end\par
+     \par
+        function updatefn1Plot(app) % update plots function for the first selected function\par
+           % getting parameters from GUI\par
+            value = app.DropDown.Value;\par
+            A = app.ampKnop1.Value;\par
+            W = floor(app.widthKnop1.Value);\par
+    switch(value)\par
+        case 'Rect'\par
+            [app.function1,app.t1] = rect(100,A,W,10);\par
+        case 'Sinc'\par
+            [app.function1,app.t1] = sincc(100,A,W,10); \par
+        case 'Trig'\par
+            [app.function1,app.t1] = trig(100,A,W,10);     \par
+    end\par
+   plot(app.fn1axis,app.t1,app.function1);\par
+       convanimation(app)\par
+      conv(app);\par
+        end\par
+      function updatefn2Plot(app) % update plots function for the second selected function\par
+            value = app.DropDown2.Value;\par
+            A = app.ampKnop2.Value;\par
+            W = floor(app.widthKnop2.Value);\par
+    switch(value)\par
+        case 'Rect'\par
+            [app.function2,app.t2] = rect(100,A,W,10);\par
+        case 'Sinc'\par
+            [app.function2,app.t2] = sincc(100,A,W,10); \par
+        case 'Trig'\par
+            [app.function2,app.t2] = trig(100,A,W,10);     \par
+    end\par
+   plot(app.fn2axis,app.t2,app.function2);\par
+   convanimation(app)   \par
+   conv(app);   \par
+            \par
+        end\par
+        \par
+    end\par
+\par
+\par
+    methods (Access = private)\par
+\par
+        % Code that executes after component creation\par
+        function startupFcn(app)\par
+            \par
+        end\par
+\par
+        % DropDown value changed function\par
+        function function1Change(app, event)\par
+           updatefn1Plot(app)\par
+        end\par
+\par
+        % DropDown2 value changed function\par
+        function function2Change(app, event)\par
+           updatefn2Plot(app)\par
+            \par
+        end\par
+\par
+        % ampKnop1 value changed function\par
+        function Amp1Changed(app)\par
+           updatefn1Plot(app)\par
+\par
+        end\par
+\par
+        % widthKnop1 value changed function\par
+        function Widthknop1change(app)\par
+                updatefn1Plot(app)\par
+\par
+            \par
+        end\par
+\par
+        % ampKnop2 value changed function\par
+        function amp2change(app)\par
+\par
+            updatefn2Plot(app);\par
+        end\par
+\par
+        % widthKnop2 value changed function\par
+        function widthKnop2change(app)\par
+\par
+            updatefn2Plot(app);\par
+        end\par
+\par
+        % Button button pushed function\par
+        function ButtonButtonPushed(app)\par
+            Gate;\par
+            close(app.UIFigure);\par
+        end\par
+    end\par
+\par
+    % App initialization and construction\par
+    methods (Access = private)\par
+\par
+        % Create UIFigure and components\par
+        function createComponents(app)\par
+\par
+            % Create UIFigure\par
+            app.UIFigure = uifigure;\par
+            app.UIFigure.Position = [100 100 832 838];\par
+            app.UIFigure.Name = 'Convolution';\par
+            setAutoResize(app, app.UIFigure, true)\par
+\par
+            % Create LabelDropDown\par
+            app.LabelDropDown = uilabel(app.UIFigure);\par
+            app.LabelDropDown.HorizontalAlignment = 'right';\par
+            app.LabelDropDown.Position = [48 774 54 15];\par
+            app.LabelDropDown.Text = 'Function1';\par
+\par
+            % Create DropDown\par
+            app.DropDown = uidropdown(app.UIFigure);\par
+            app.DropDown.Items = \{'Rect', 'Sinc', 'Trig'\};\par
+            app.DropDown.ValueChangedFcn = createCallbackFcn(app, @function1Change, true);\par
+            app.DropDown.Position = [146 770 100 22];\par
+            app.DropDown.Value = 'Rect';\par
+\par
+            % Create fn1axis\par
+            app.fn1axis = uiaxes(app.UIFigure);\par
+            title(app.fn1axis, 'Function 1');\par
+            xlabel(app.fn1axis, 't');\par
+            ylabel(app.fn1axis, 'Function1(t)');\par
+            app.fn1axis.Position = [486 608 314 185];\par
+\par
+            % Create LabelKnob\par
+            app.LabelKnob = uilabel(app.UIFigure);\par
+            app.LabelKnob.HorizontalAlignment = 'center';\par
+            app.LabelKnob.Position = [59.5 608 55 15];\par
+            app.LabelKnob.Text = 'Amplitude';\par
+\par
+            % Create ampKnop1\par
+            app.ampKnop1 = uiknob(app.UIFigure, 'continuous');\par
+            app.ampKnop1.Limits = [0 10];\par
+            app.ampKnop1.ValueChangedFcn = createCallbackFcn(app, @Amp1Changed);\par
+            app.ampKnop1.Position = [57 657 60 60];\par
+            app.ampKnop1.Value = 1;\par
+\par
+            % Create fn2axis\par
+            app.fn2axis = uiaxes(app.UIFigure);\par
+            title(app.fn2axis, 'Function 2');\par
+            xlabel(app.fn2axis, 't');\par
+            ylabel(app.fn2axis, 'Function2(t)');\par
+            app.fn2axis.Position = [486 398 314 185];\par
+\par
+            % Create Label\par
+            app.Label = uilabel(app.UIFigure);\par
+            app.Label.HorizontalAlignment = 'right';\par
+            app.Label.Position = [37 565 63 15];\par
+            app.Label.Text = 'Drop Down';\par
+\par
+            % Create DropDown2\par
+            app.DropDown2 = uidropdown(app.UIFigure);\par
+            app.DropDown2.Items = \{'Rect', 'Sinc', 'Trig'\};\par
+            app.DropDown2.ValueChangedFcn = createCallbackFcn(app, @function2Change, true);\par
+            app.DropDown2.Position = [144 561 100 22];\par
+            app.DropDown2.Value = 'Rect';\par
+\par
+            % Create Label2\par
+            app.Label2 = uilabel(app.UIFigure);\par
+            app.Label2.HorizontalAlignment = 'center';\par
+            app.Label2.Position = [59.5 398 55 15];\par
+            app.Label2.Text = 'Amplitude';\par
+\par
+            % Create ampKnop2\par
+            app.ampKnop2 = uiknob(app.UIFigure, 'continuous');\par
+            app.ampKnop2.Limits = [0 10];\par
+            app.ampKnop2.ValueChangedFcn = createCallbackFcn(app, @amp2change);\par
+            app.ampKnop2.Position = [57 447 60 60];\par
+            app.ampKnop2.Value = 1;\par
+\par
+            % Create convaxis\par
+            app.convaxis = uiaxes(app.UIFigure);\par
+            title(app.convaxis, 'Title');\par
+            xlabel(app.convaxis, 'X');\par
+            ylabel(app.convaxis, 'Y');\par
+            app.convaxis.Position = [13 183 808 216];\par
+\par
+            % Create animatedconvaxis\par
+            app.animatedconvaxis = uiaxes(app.UIFigure);\par
+            title(app.animatedconvaxis, 'Title');\par
+            xlabel(app.animatedconvaxis, 'X');\par
+            ylabel(app.animatedconvaxis, 'Y');\par
+            app.animatedconvaxis.Position = [13 5 808 216];\par
+\par
+            % Create Label3\par
+            app.Label3 = uilabel(app.UIFigure);\par
+            app.Label3.HorizontalAlignment = 'center';\par
+            app.Label3.Position = [197.5 608 31 15];\par
+            app.Label3.Text = 'Width';\par
+\par
+            % Create widthKnop1\par
+            app.widthKnop1 = uiknob(app.UIFigure, 'continuous');\par
+            app.widthKnop1.Limits = [1 10];\par
+            app.widthKnop1.MajorTicks = [1 2 3 4 5 6 7 8 9 10];\par
+            app.widthKnop1.ValueChangedFcn = createCallbackFcn(app, @Widthknop1change);\par
+            app.widthKnop1.MinorTicks = [];\par
+            app.widthKnop1.Position = [183 657 60 60];\par
+            app.widthKnop1.Value = 1;\par
+\par
+            % Create Label4\par
+            app.Label4 = uilabel(app.UIFigure);\par
+            app.Label4.HorizontalAlignment = 'center';\par
+            app.Label4.Position = [197.5 401 31 15];\par
+            app.Label4.Text = 'Width';\par
+\par
+            % Create widthKnop2\par
+            app.widthKnop2 = uiknob(app.UIFigure, 'continuous');\par
+            app.widthKnop2.Limits = [1 10];\par
+            app.widthKnop2.MajorTicks = [1 2 3 4 5 6 7 8 9 10];\par
+            app.widthKnop2.ValueChangedFcn = createCallbackFcn(app, @widthKnop2change);\par
+            app.widthKnop2.MinorTicks = [];\par
+            app.widthKnop2.Position = [183 450 60 60];\par
+            app.widthKnop2.Value = 1;\par
+\par
+            % Create Button\par
+            app.Button = uibutton(app.UIFigure, 'push');\par
+            app.Button.ButtonPushedFcn = createCallbackFcn(app, @ButtonButtonPushed);\par
+            app.Button.Position = [713 804 100 22];\par
+            app.Button.Text = 'Back';\par
+        end\par
+    end\par
+\par
+    methods (Access = public)\par
+\par
+        % Construct app\par
+        function app = Convolutionwindow()\par
+\par
+            % Create and configure components\par
+            createComponents(app)\par
+\par
+            % Register the app with App Designer\par
+            registerApp(app, app.UIFigure)\par
+\par
+            % Execute the startup function\par
+            runStartupFcn(app, @startupFcn)\par
+\par
+            if nargout == 0\par
+                clear app\par
+            end\par
+        end\par
+\par
+        % Code that executes before app deletion\par
+        function delete(app)\par
+\par
+            % Delete UIFigure when app is deleted\par
+            delete(app.UIFigure)\par
+        end\par
+    end\par
+end\par
+\par
+\par
+\par
+\par
+Spectrum Analyzer:\par
+\par
+\par
+classdef Spectrumanalyzer < matlab.apps.AppBase\par
+\par
+    % Properties that correspond to app components\par
+    properties (Access = public)\par
+        UIFigure               matlab.ui.Figure                   % Spectru...\par
+        TabGroup               matlab.ui.container.TabGroup       % Spectru...\par
+        Tab                    matlab.ui.container.Tab            % Spectru...\par
+        Panel                  matlab.ui.container.Panel          % Input S...\par
+        DropDown               matlab.ui.control.DropDown         % Audio 1...\par
+        Panel2                 matlab.ui.container.Panel          % DFT Set...\par
+        DropDown2              matlab.ui.control.DropDown         % 8K-DFT,...\par
+        UIAxes                 matlab.ui.control.UIAxes           % Time Do...\par
+        UIAxes2                matlab.ui.control.UIAxes           % Frequen...\par
+        NumericEditField       matlab.ui.control.NumericEditField % [0 99999]\par
+        Label                  matlab.ui.control.Label            % Frequen...\par
+        Label2                 matlab.ui.control.Label            % Hz :\par
+        NumericEditField2      matlab.ui.control.NumericEditField % [1 100000]\par
+        Label3                 matlab.ui.control.Label            % Hz\par
+        Label4                 matlab.ui.control.Label            % RBW\par
+        EditField              matlab.ui.control.EditField       \par
+        Button                 matlab.ui.control.Button           % Back\par
+        Tab2                   matlab.ui.container.Tab            % Compari...\par
+        Panel3                 matlab.ui.container.Panel          % Window 1\par
+        window1dropdown        matlab.ui.control.DropDown         % Rectang...\par
+        LabelNumericEditField3 matlab.ui.control.Label            % Length\par
+        NumericEditField3      matlab.ui.control.NumericEditField % [1 Inf]\par
+        UIAxes3                matlab.ui.control.UIAxes           % Time Do...\par
+        UIAxes4                matlab.ui.control.UIAxes           % Frequen...\par
+        Panel4                 matlab.ui.container.Panel          % Window 2\par
+        Label5                 matlab.ui.control.Label            % Length\par
+        NumericEditField4      matlab.ui.control.NumericEditField % [1 Inf]\par
+        window2dropdown        matlab.ui.control.DropDown         % Rectang...\par
+        UIAxes5                matlab.ui.control.UIAxes           % Time Do...\par
+        UIAxes6                matlab.ui.control.UIAxes           % Frequen...\par
+    end\par
+\par
+\par
+    properties (Access = public)\par
+        %Global variables\par
+        Signal; % Current Signal\par
+        Signal_FFT; % Current Signal FFT\par
+        N; % FFT order\par
+    end\par
+\par
+    methods (Access = public)\par
+        function UpdateComparisonwindow1(app) % update graphs function for the first comparison window\par
+        signal = app.Signal;\par
+        value = app.window1dropdown.Value; % selected window\par
+        switch(value)\par
+            case 'No Window'\par
+            app.NumericEditField3.Enable = 'off'; %disabling length entering option\par
+            otherwise\par
+               app.NumericEditField3.Enable = 'on';\par
+               L = app.NumericEditField3.Value; % getting length\par
+               if L>length(signal) % checking if the length is greated than the signal length ( error handling)\par
+                   L = length(signal); % if L > the signal length set the window to its maximum ( the signal length)\par
+               end\par
+               window = zeros(1,length(app.Signal)); % initiating window\par
+               if(strcmp(value,'Rectangular'))\par
+                   window(1:L) = 1; % creating rect window\par
+                signal = app.Signal .* window; \par
+               elseif(strcmp(value,'Triangular'))\par
+                 trigwin = triang(L); % creating trig window\par
+                 trigwin = [ trigwin' zeros(1,length(signal)-L)]; % zero padding\par
+                 signal = app.Signal .* trigwin;\par
+               elseif(strcmp(value,'Hanning'))\par
+                  hannwin = hann(L); % creating hanning window\par
+                  hannwin = [ hannwin' zeros(1,length(signal)-L)]; % zero padding\par
+                   signal = app.Signal .* hannwin;\par
+               elseif(strcmp(value,'Hamming'))\par
+                  hammwin = hamming(L); % creaing hamming window\par
+                  hammwin = [ hammwin' zeros(1,length(signal)-L)]; % zero padding\par
+                   signal = app.Signal .* hammwin;               \par
+               \par
+               end    \par
+        end\par
+       plot(app.UIAxes3,signal); % plotting time domain\par
+       \par
+        FFT = abs(fftshift(fft(signal,app.N))); % calculating FFT with desired order\par
+        plot(app.UIAxes4,FFT); % plotting frequency domain\par
+        end\par
+        \par
+function UpdateComparisonwindow2(app) % same as Update Comparisonwindow1 but for comparisonwindow2\par
+        signal = app.Signal;\par
+        value = app.window2dropdown.Value;\par
+        switch(value)\par
+            case 'No Window'\par
+            app.NumericEditField4.Enable = 'off';\par
+            otherwise\par
+               app.NumericEditField4.Enable = 'on';\par
+               L = app.NumericEditField4.Value;\par
+               if L>length(signal)\par
+                   L = length(signal);\par
+               end\par
+               window = zeros(1,length(app.Signal));\par
+               if(strcmp(value,'Rectangular'))\par
+                   window(1:L) = 1;\par
+                signal = app.Signal .* window;\par
+               elseif(strcmp(value,'Triangular'))\par
+                 trigwin = triang(L);\par
+                 trigwin = [ trigwin' zeros(1,length(signal)-L)];\par
+                 signal = app.Signal .* trigwin;\par
+               elseif(strcmp(value,'Hanning'))\par
+                  hannwin = hann(L);\par
+                  hannwin = [ hannwin' zeros(1,length(signal)-L)];\par
+                   signal = app.Signal .* hannwin;\par
+               elseif(strcmp(value,'Hamming'))\par
+                  hammwin = hamming(L);\par
+                  hammwin = [ hammwin' zeros(1,length(signal)-L)];\par
+                   signal = app.Signal .* hammwin;               \par
+               \par
+               end    \par
+        end\par
+        plot(app.UIAxes5,signal); \par
+        FFT = abs(fftshift(fft(signal,app.N)));\par
+        plot(app.UIAxes6,FFT);\par
+        end\par
+        \par
+        \par
+        \par
+        \par
+        \par
+        \par
+        \par
+        \par
+        \par
+        function Updategraphs(app) % update graphs for the spectrum analyzer\par
+            Value = app.DropDown.Value;\par
+            switch(Value) % selecting input signal\par
+                case 'Audio 1'\par
+                    [app.Signal, Fs] = audioread('m.wav');\par
+                    app.Signal = app.Signal';\par
+                    totaltime = 1/Fs * length(app.Signal);\par
+                    t = 0:1/Fs:totaltime-1/Fs; % creating time axis\par
+                case 'Audio 2'\par
+                    [app.Signal, Fs] = audioread('n.wav');\par
+                    app.Signal = app.Signal';\par
+                    totaltime = 1/Fs * length(app.Signal);\par
+                    t = 0:1/Fs:totaltime-1/Fs; % creating time axis\par
+ \par
+                case 'Rect'\par
+                    [app.Signal, t] = rect(100,1,1,10);\par
+                    Fs = 100;\par
+                case 'Sinc'\par
+                    [app.Signal, t] = sincc(100,1,1,10);\par
+                    Fs = 100;\par
+                case 'Trig'\par
+                    [app.Signal, t] = trig(100,1,1,10);\par
+                    Fs = 100;\par
+            end\par
+          plot(app.UIAxes,t,app.Signal);  % ploting time domain\par
+          \par
+          %Frequency Domain\par
+          value = app.DropDown2.Value;\par
+          switch (value)\par
+              case '8K-DFT'\par
+                  app.N = 8000;\par
+              case '16K-DFT'\par
+                  app.N = 16000;\par
+              case '32K-DFT'\par
+                  app.N = 32000;\par
+              case '64K-DFT'\par
+                  app.N = 64000;\par
+                                    \par
+          end\par
+              app.Signal_FFT = abs(fftshift(fft(app.Signal,app.N))); %calculating fft with desired order\par
+              f1 = app.NumericEditField.Value; % getting frequency span limits\par
+              f2 = app.NumericEditField2.Value; % getting frequency span limits\par
+              frequencyaxis = 1:length(app.Signal_FFT); %creating frequency axis\par
+              frequencyaxis = frequencyaxis * Fs/app.N; % transforming it to real frequency axis\par
+              k = frequencyaxis>f1 & frequencyaxis<f2; % applying frequency span\par
+              \par
+              plot(app.UIAxes2,frequencyaxis(k),app.Signal_FFT(k));  %plotting Frequency doman\par
+\par
+              app.EditField.Value = num2str(Fs/app.N); % calculating and outputting RBW\par
+        end\par
+       \par
+    \par
+    \par
+    end\par
+\par
+\par
+    methods (Access = private)\par
+\par
+        % Code that executes after component creation\par
+        function startupFcn(app)\par
+   set(app.UIFigure, 'Position', get(0, 'Screensize')); % starting in full screen\par
+      set(app.TabGroup, 'Position', get(0, 'Screensize'));\par
+ \par
+        end\par
+\par
+        % DropDown2 value changed function\par
+        function DropDown2ValueChanged(app, event)\par
+           Updategraphs(app);\par
+                     \par
+        end\par
+\par
+        % DropDown value changed function\par
+        function DropDownValueChanged(app, event)\par
+           \par
+            Updategraphs(app);\par
+        end\par
+\par
+        % NumericEditField value changed function\par
+        function NumericEditFieldValueChanged(app)\par
+   Updategraphs(app);            \par
+        end\par
+\par
+        % NumericEditField2 value changed function\par
+        function NumericEditField2ValueChanged(app)\par
+   Updategraphs(app);\par
+        end\par
+\par
+        % window1dropdown value changed function\par
+        function window1dropdownValueChanged(app, event)\par
+            if isvector(app.Signal) % checking if the user selected a signal ( error handling)\par
+            UpdateComparisonwindow1(app);\par
+            end\par
+        \par
+        end\par
+\par
+        % NumericEditField3 value changed function\par
+        function NumericEditField3ValueChanged(app)\par
+            if isvector(app.Signal) % checking if the user selected a signal ( error handling)\par
+            UpdateComparisonwindow1(app);\par
+            end\par
+        end\par
+\par
+        % window2dropdown value changed function\par
+        function window2dropdownValueChanged(app, event)\par
+            if isvector(app.Signal) % checking if the user selected a signal ( error handling)\par
+            UpdateComparisonwindow2(app);\par
+            end\par
+        end\par
+\par
+        % NumericEditField4 value changed function\par
+        function NumericEditField4ValueChanged(app)\par
+            if isvector(app.Signal) % checking if the user selected a signal ( error handling)\par
+            UpdateComparisonwindow2(app);\par
+            end\par
+            \par
+        end\par
+\par
+        % Button button pushed function\par
+        function ButtonButtonPushed(app)\par
+            Gate;\par
+            close(app.UIFigure);\par
+        end\par
+    end\par
+\par
+    % App initialization and construction\par
+    methods (Access = private)\par
+\par
+        % Create UIFigure and components\par
+        function createComponents(app)\par
+\par
+            % Create UIFigure\par
+            app.UIFigure = uifigure;\par
+            app.UIFigure.Position = [100 100 770 660];\par
+            app.UIFigure.Name = 'Spectrum Analyzer';\par
+            setAutoResize(app, app.UIFigure, true)\par
+\par
+            % Create TabGroup\par
+            app.TabGroup = uitabgroup(app.UIFigure);\par
+            app.TabGroup.Units = 'pixels';\par
+            app.TabGroup.Position = [0 0 770 660];\par
+\par
+            % Create Tab\par
+            app.Tab = uitab(app.TabGroup);\par
+            app.Tab.Units = 'pixels';\par
+            app.Tab.Title = 'Spectrum Analyzer';\par
+\par
+            % Create Panel\par
+            app.Panel = uipanel(app.Tab);\par
+            app.Panel.BorderType = 'line';\par
+            app.Panel.Title = 'Input Signal';\par
+            app.Panel.FontName = 'Helvetica';\par
+            app.Panel.FontUnits = 'pixels';\par
+            app.Panel.FontSize = 12;\par
+            app.Panel.Units = 'pixels';\par
+            app.Panel.Position = [10 552 157 75];\par
+\par
+            % Create DropDown\par
+            app.DropDown = uidropdown(app.Panel);\par
+            app.DropDown.Items = \{'Audio 1', 'Audio 2', 'Rect', 'Sinc', 'Trig'\};\par
+            app.DropDown.ValueChangedFcn = createCallbackFcn(app, @DropDownValueChanged, true);\par
+            app.DropDown.Position = [28 18 100 22];\par
+            app.DropDown.Value = 'Audio 1';\par
+\par
+            % Create Panel2\par
+            app.Panel2 = uipanel(app.Tab);\par
+            app.Panel2.BorderType = 'line';\par
+            app.Panel2.Title = 'DFT Settings';\par
+            app.Panel2.FontName = 'Helvetica';\par
+            app.Panel2.FontUnits = 'pixels';\par
+            app.Panel2.FontSize = 12;\par
+            app.Panel2.Units = 'pixels';\par
+            app.Panel2.Position = [181 552 157 75];\par
+\par
+            % Create DropDown2\par
+            app.DropDown2 = uidropdown(app.Panel2);\par
+            app.DropDown2.Items = \{'8K-DFT', '16K-DFT', '32K-DFT', '64K-DFT'\};\par
+            app.DropDown2.ValueChangedFcn = createCallbackFcn(app, @DropDown2ValueChanged, true);\par
+            app.DropDown2.Position = [28 20 100 20];\par
+            app.DropDown2.Value = '64K-DFT';\par
+\par
+            % Create UIAxes\par
+            app.UIAxes = uiaxes(app.Tab);\par
+            title(app.UIAxes, 'Time Domain');\par
+            xlabel(app.UIAxes, 'Time');\par
+            ylabel(app.UIAxes, 'Signal');\par
+            app.UIAxes.Position = [0 2 358 260];\par
+\par
+            % Create UIAxes2\par
+            app.UIAxes2 = uiaxes(app.Tab);\par
+            title(app.UIAxes2, 'Frequency Domain');\par
+            xlabel(app.UIAxes2, 'Frequency');\par
+            ylabel(app.UIAxes2, 'Amp');\par
+            app.UIAxes2.Position = [375 2 358 260];\par
+\par
+            % Create NumericEditField\par
+            app.NumericEditField = uieditfield(app.Tab, 'numeric');\par
+            app.NumericEditField.ValueChangedFcn = createCallbackFcn(app, @NumericEditFieldValueChanged);\par
+            app.NumericEditField.Limits = [0 99999];\par
+            app.NumericEditField.Position = [410 578 47 20];\par
+\par
+            % Create Label\par
+            app.Label = uilabel(app.Tab);\par
+            app.Label.Position = [419 607 90 15];\par
+            app.Label.Text = 'Frequency Span';\par
+\par
+            % Create Label2\par
+            app.Label2 = uilabel(app.Tab);\par
+            app.Label2.Position = [470 583 21 15];\par
+            app.Label2.Text = 'Hz :';\par
+\par
+            % Create NumericEditField2\par
+            app.NumericEditField2 = uieditfield(app.Tab, 'numeric');\par
+            app.NumericEditField2.ValueChangedFcn = createCallbackFcn(app, @NumericEditField2ValueChanged);\par
+            app.NumericEditField2.Limits = [1 100000];\par
+            app.NumericEditField2.Position = [500 578 47 20];\par
+            app.NumericEditField2.Value = 100000;\par
+\par
+            % Create Label3\par
+            app.Label3 = uilabel(app.Tab);\par
+            app.Label3.Position = [560 583 20 15];\par
+            app.Label3.Text = 'Hz';\par
+\par
+            % Create Label4\par
+            app.Label4 = uilabel(app.Tab);\par
+            app.Label4.Position = [630 282 28 15];\par
+            app.Label4.Text = 'RBW';\par
+\par
+            % Create EditField\par
+            app.EditField = uieditfield(app.Tab, 'text');\par
+            app.EditField.Editable = 'off';\par
+            app.EditField.BackgroundColor = [0.9373 0.9373 0.9373];\par
+            app.EditField.Position = [667 282 66 22];\par
+\par
+            % Create Button\par
+            app.Button = uibutton(app.Tab, 'push');\par
+            app.Button.ButtonPushedFcn = createCallbackFcn(app, @ButtonButtonPushed);\par
+            app.Button.Position = [657 605 100 22];\par
+            app.Button.Text = 'Back';\par
+\par
+            % Create Tab2\par
+            app.Tab2 = uitab(app.TabGroup);\par
+            app.Tab2.Units = 'pixels';\par
+            app.Tab2.Title = 'Comparison Mode';\par
+\par
+            % Create Panel3\par
+            app.Panel3 = uipanel(app.Tab2);\par
+            app.Panel3.BorderType = 'line';\par
+            app.Panel3.Title = 'Window 1';\par
+            app.Panel3.FontName = 'Helvetica';\par
+            app.Panel3.FontUnits = 'pixels';\par
+            app.Panel3.FontSize = 12;\par
+            app.Panel3.Units = 'pixels';\par
+            app.Panel3.Position = [82 481 157 121];\par
+\par
+            % Create window1dropdown\par
+            app.window1dropdown = uidropdown(app.Panel3);\par
+            app.window1dropdown.Items = \{'Rectangular', 'Triangular', 'Hanning', 'Hamming', 'No Window'\};\par
+            app.window1dropdown.ValueChangedFcn = createCallbackFcn(app, @window1dropdownValueChanged, true);\par
+            app.window1dropdown.Position = [28 64 100 22];\par
+            app.window1dropdown.Value = 'No Window';\par
+\par
+            % Create LabelNumericEditField3\par
+            app.LabelNumericEditField3 = uilabel(app.Panel3);\par
+            app.LabelNumericEditField3.Enable = 'off';\par
+            app.LabelNumericEditField3.HorizontalAlignment = 'right';\par
+            app.LabelNumericEditField3.Position = [53 38 50 15];\par
+            app.LabelNumericEditField3.Text = 'Length';\par
+\par
+            % Create NumericEditField3\par
+            app.NumericEditField3 = uieditfield(app.Panel3, 'numeric');\par
+            app.NumericEditField3.ValueChangedFcn = createCallbackFcn(app, @NumericEditField3ValueChanged);\par
+            app.NumericEditField3.Limits = [1 Inf];\par
+            app.NumericEditField3.ValueDisplayFormat = '%.0f';\par
+            app.NumericEditField3.Enable = 'off';\par
+            app.NumericEditField3.Position = [27 9 100 22];\par
+            app.NumericEditField3.Value = 1;\par
+\par
+            % Create UIAxes3\par
+            app.UIAxes3 = uiaxes(app.Tab2);\par
+            title(app.UIAxes3, 'Time Domain');\par
+            xlabel(app.UIAxes3, 'Time');\par
+            ylabel(app.UIAxes3, 'Signal');\par
+            app.UIAxes3.Position = [10 272 300 185];\par
+\par
+            % Create UIAxes4\par
+            app.UIAxes4 = uiaxes(app.Tab2);\par
+            title(app.UIAxes4, 'Frequency Domain');\par
+            xlabel(app.UIAxes4, 'Frequency');\par
+            ylabel(app.UIAxes4, 'Amp');\par
+            app.UIAxes4.Position = [10 71 300 185];\par
+\par
+            % Create Panel4\par
+            app.Panel4 = uipanel(app.Tab2);\par
+            app.Panel4.BorderType = 'line';\par
+            app.Panel4.Title = 'Window 2';\par
+            app.Panel4.FontName = 'Helvetica';\par
+            app.Panel4.FontUnits = 'pixels';\par
+            app.Panel4.FontSize = 12;\par
+            app.Panel4.Units = 'pixels';\par
+            app.Panel4.Position = [492 481 157 121];\par
+\par
+            % Create Label5\par
+            app.Label5 = uilabel(app.Panel4);\par
+            app.Label5.Enable = 'off';\par
+            app.Label5.HorizontalAlignment = 'right';\par
+            app.Label5.Position = [52 38 50 15];\par
+            app.Label5.Text = 'Length';\par
+\par
+            % Create NumericEditField4\par
+            app.NumericEditField4 = uieditfield(app.Panel4, 'numeric');\par
+            app.NumericEditField4.ValueChangedFcn = createCallbackFcn(app, @NumericEditField4ValueChanged);\par
+            app.NumericEditField4.Limits = [1 Inf];\par
+            app.NumericEditField4.ValueDisplayFormat = '%.0f';\par
+            app.NumericEditField4.Enable = 'off';\par
+            app.NumericEditField4.Position = [27 9 100 22];\par
+            app.NumericEditField4.Value = 1;\par
+\par
+            % Create window2dropdown\par
+            app.window2dropdown = uidropdown(app.Panel4);\par
+            app.window2dropdown.Items = \{'Rectangular', 'Triangular', 'Hanning', 'Hamming', 'No Window'\};\par
+            app.window2dropdown.ValueChangedFcn = createCallbackFcn(app, @window2dropdownValueChanged, true);\par
+            app.window2dropdown.Position = [28 64 100 22];\par
+            app.window2dropdown.Value = 'No Window';\par
+\par
+            % Create UIAxes5\par
+            app.UIAxes5 = uiaxes(app.Tab2);\par
+            title(app.UIAxes5, 'Time Domain');\par
+            xlabel(app.UIAxes5, 'X');\par
+            ylabel(app.UIAxes5, 'Y');\par
+            app.UIAxes5.Position = [420 272 300 185];\par
+\par
+            % Create UIAxes6\par
+            app.UIAxes6 = uiaxes(app.Tab2);\par
+            title(app.UIAxes6, 'Frequency Domain');\par
+            xlabel(app.UIAxes6, 'Frequency');\par
+            ylabel(app.UIAxes6, 'Amp');\par
+            app.UIAxes6.Position = [420 71 300 185];\par
+        end\par
+    end\par
+\par
+    methods (Access = public)\par
+\par
+        % Construct app\par
+        function app = Spectrumanalyzer()\par
+\par
+            % Create and configure components\par
+            createComponents(app)\par
+\par
+            % Register the app with App Designer\par
+            registerApp(app, app.UIFigure)\par
+\par
+            % Execute the startup function\par
+            runStartupFcn(app, @startupFcn)\par
+\par
+            if nargout == 0\par
+                clear app\par
+            end\par
+        end\par
+\par
+        % Code that executes before app deletion\par
+        function delete(app)\par
+\par
+            % Delete UIFigure when app is deleted\par
+            delete(app.UIFigure)\par
+        end\par
+    end\par
+end\par
+\par
+\par
+}
+ 
